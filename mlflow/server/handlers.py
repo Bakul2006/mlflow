@@ -671,6 +671,23 @@ def initialize_backend_stores(
     workspace_store_uri: str | None = None,
 ) -> None:
     tracking_store = _get_tracking_store(backend_store_uri, default_artifact_root)
+    import os
+    import logging
+
+    try:
+        store_type = type(tracking_store).__name__
+        mlruns_exists = os.path.exists("mlruns")
+
+        if mlruns_exists and "SqlAlchemyStore" in store_type:
+            logging.warning(
+                "Detected existing 'mlruns/' directory while using a SQL backend store. "
+                "This may cause UI inconsistencies where new traces are not visible. "
+                "Consider running MLflow UI with --backend-store-uri sqlite:///mlflow.db"
+            )
+    except Exception:
+        pass
+
+    registry_store = None
     registry_store = None
     try:
         registry_store = _get_model_registry_store(registry_store_uri)
@@ -683,6 +700,7 @@ def initialize_backend_stores(
             workspace_uri=workspace_store_uri,
             tracking_uri=backend_store_uri,
         )
+        
         _verify_tracking_store_workspace_support(tracking_store)
         _verify_model_registry_store_workspace_support(registry_store)
 
